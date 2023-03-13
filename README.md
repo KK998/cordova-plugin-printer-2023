@@ -139,6 +139,9 @@ For iOS its possible to send the content directly to the printer without any dia
 cordova.plugins.printer.print(content, { printer: 'ipp://...' });
 ```
 
+> Note that the ipp:// address should be the name of the printer addres that you get from copying from your settings
+> For example this is the correct address that was used for my local setup: ipp://**REDACTED**258.local.:631/ipp/print
+
 To let the user pick an available printer:
 
 ```javascript
@@ -233,23 +236,47 @@ Then execute:
 
     cordova build
 
-## Contributing
-
-1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
-
-## License
-
-This software is released under the [Apache 2.0 License][apache2_license].
-
-Made with :yum: from Leipzig
-
-© 2013 [appPlant GmbH][appplant]
-
 
 [cordova]: https://cordova.apache.org
 [apache2_license]: http://opensource.org/licenses/Apache-2.0
 [appplant]: www.appplant.de
+
+
+## Using the plugin with capacitor:
+
+```shell
+npm install https://github.com/KK998/cordova-plugin-printer-2023
+npm install @awesome-cordova-plugins/printer
+```
+
+Using printer inside your react app:
+```tsx
+// imports
+import {
+    Printer,
+    PrintOptions
+} from "@awesome-cordova-plugins/printer"
+
+// inside the react component
+const [printerReady, setPrinterReady] = React.useState<boolean>(false);
+
+React.useEffect(() => {
+    document.addEventListener("deviceready", () => {
+        setPrinterReady(true)
+    }, false)
+}, [])
+
+const print = () => {
+    Printer
+        .print("ECHO", { printer: "ipp://**REDACTED**.local.:631/ipp/print" })
+        .then((res: any) => {
+            console.log("Printed", res)
+        }
+        ).catch((err) => {
+            console.error(err)
+        })
+}
+
+// inside component render
+{printerReady && <button onClick={print}>Print</button>}
+```
