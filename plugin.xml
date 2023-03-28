@@ -115,9 +115,16 @@
 
         <source-file src="src/android/PrintOptions.java"
             target-dir="src/de/appplant/cordova/plugin/printer" />
+		
+		<source-file src="src/android/BrotherPrinterOptions.java"
+            target-dir="src/de/appplant/cordova/plugin/printer" />
 
         <source-file src="src/android/PrintProxy.java"
             target-dir="src/de/appplant/cordova/plugin/printer" />
+			
+		<framework src="src/android/plugin-settings.gradle" custom="true" type="gradleReference" />
+			
+		<lib-file src="src/android/BrotherPrintLibrary.aar"/>
     </platform>
 
     <!-- windows -->

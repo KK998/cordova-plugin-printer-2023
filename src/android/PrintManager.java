@@ -21,29 +21,40 @@
 
 package de.appplant.cordova.plugin.printer;
 
+import static android.content.Context.PRINT_SERVICE;
+import static android.os.Build.VERSION.SDK_INT;
+import static android.print.PrintJobInfo.STATE_COMPLETED;
+import static de.appplant.cordova.plugin.printer.PrintContent.ContentType.UNSUPPORTED;
+
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
 import android.print.PrintJob;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.print.PrintHelper;
+import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.print.PrintHelper;
+
+import com.brother.sdk.lmprinter.Channel;
+import com.brother.sdk.lmprinter.OpenChannelError;
+import com.brother.sdk.lmprinter.PrintError;
+import com.brother.sdk.lmprinter.PrinterDriver;
+import com.brother.sdk.lmprinter.PrinterDriverGenerateResult;
+import com.brother.sdk.lmprinter.PrinterDriverGenerator;
+import com.brother.sdk.lmprinter.PrinterModel;
+import com.brother.sdk.lmprinter.setting.QLPrintSettings;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.InputStream;
-
-import static android.content.Context.PRINT_SERVICE;
-import static android.os.Build.VERSION.SDK_INT;
-import static android.print.PrintJobInfo.STATE_COMPLETED;
-import static de.appplant.cordova.plugin.printer.PrintContent.ContentType.UNSUPPORTED;
 
 /**
  * Provides high level methods for printing.
@@ -275,17 +286,41 @@ class PrintManager
     private void printImage (@NonNull String path, @NonNull JSONObject settings,
                              @NonNull OnPrintFinishCallback callback)
     {
-        Bitmap bitmap        = PrintContent.decode(path, context);
+        BrotherPrinterOptions options = new BrotherPrinterOptions(settings);
+
+        Channel channel = Channel.newWifiChannel(options.printer);
+
+        PrinterDriverGenerateResult result = PrinterDriverGenerator.openChannel(channel);
+        if (result.getError().getCode() != OpenChannelError.ErrorCode.NoError) {
+            return;
+        }
+
+        PrinterDriver printerDriver = result.getDriver();
+
+        QLPrintSettings printSettings = new QLPrintSettings(PrinterModel.QL_820NWB);
+
+        printSettings.setLabelSize(QLPrintSettings.LabelSize.DieCutW62H100);
+        printSettings.setAutoCut(true);
+        printSettings.setWorkPath(context.getCacheDir().getAbsolutePath());
+
+        printSettings.setPrintOrientation(options.orientation);
+        printSettings.setScaleMode(options.scaleMode);
+
+        Bitmap bitmap = PrintContent.decode(path, context);
 
         if (bitmap == null) return;
 
-        PrintOptions options = new PrintOptions(settings);
-        PrintHelper printer  = new PrintHelper(context);
-        String jobName       = options.getJobName();
+        PrintError printError = printerDriver.printImage(bitmap, printSettings);
 
-        options.decoratePrintHelper(printer);
+        if (printError.getCode() != PrintError.ErrorCode.NoError) {
+            Log.d("", "Error - Print Image: " + printError.getCode());
+            callback.onFinish(false);
+        }
+        else {
+            callback.onFinish(true);
+        }
 
-        printer.printBitmap(jobName, bitmap, () -> callback.onFinish(isPrintJobCompleted(jobName)));
+        printerDriver.closeChannel();
     }
 
     /**
